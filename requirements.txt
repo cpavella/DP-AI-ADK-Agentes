@@ -11,3 +11,4 @@ sqlalchemy
 sqlalchemy-bigquery
 tabulate
 streamlit
+pygsheets

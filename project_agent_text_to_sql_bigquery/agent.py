@@ -4,7 +4,7 @@
 from google.adk.agents import Agent
 
 # El "." al principio significa que es una importación "relativa" desde la misma carpeta del proyecto.
-from tools.run_sql_query import run_sql_query
+from .tools.run_sql_query import run_sql_query
 
 # La definición del esquema de la tabla no cambia.
 TABLE_SCHEMA = """
@@ -35,7 +35,7 @@ CREATE TABLE `bigquery-public-data.new_york_citibike.citibike_trips` (
 # busca por defecto al iniciarse.
 root_agent = Agent(
     name="SqlAgent",
-    model="gemini-2.5-pro",  # Simplemente el nombre del modelo.
+    model="gemini-2.5-flash",  # Simplemente el nombre del modelo.
     description="Agente Analista de Datos de CitiBike",
     tools=[
         run_sql_query,

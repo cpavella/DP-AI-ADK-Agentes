@@ -1,8 +1,8 @@
 # agent.py
 
 from google.adk.agents import Agent
-from tools.registro_sheet import registrar_interes_en_sheet
-from tools.notificacion_email import enviar_correo_bienvenida
+from .tools.registro_sheet import registrar_interes_en_sheet
+from .tools.notificacion_email import enviar_correo_bienvenida
 
 # Información sobre los cursos que el agente usará para generar los correos.
 # Esta información podría venir de una base de datos o una búsqueda en el futuro.

@@ -5,7 +5,7 @@
 - Construimos el proyecto dentro de la carpeta SRC
 - gcloud auth application-default login
 - pip install -r requirements.txt
-- Lanzamos "adk web --host 0.0.0.0"
+- Lanzamos "adk web"
 
 # Tercer paso: Habilitamos el API de VertexAI
 - gcloud services enable aiplatform.googleapis.com --project=project-mlops-10-streamlit
