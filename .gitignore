@@ -1,0 +1,17 @@
+# Credenciales y secretos
+.env
+*.env
+**/.env
+*service-account*.json
+datapath-taller-*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# macOS
+.DS_Store
+**/.DS_Store

@@ -1,0 +1,9 @@
+google-adk
+pygsheets
+pandas
+python-dotenv
+
+google-cloud-aiplatform
+google-cloud-storage
+google-genai
+gitpython
