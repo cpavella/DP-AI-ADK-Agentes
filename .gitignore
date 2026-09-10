@@ -18,3 +18,7 @@ venv/
 
 # ADK sesiones/artefactos locales
 **/.adk/
+
+# Node / frontend
+node_modules/
+**/dist/

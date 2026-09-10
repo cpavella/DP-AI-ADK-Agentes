@@ -6,9 +6,18 @@ google-cloud-aiplatform
 google-cloud-storage
 google-genai
 gitpython
-google-adk
+google-adk>=2.8.0
+# google-adk 2.8 fija opentelemetry-api<=1.42.1 y google-api-core 2.36 exige >=1.44: sin este tope pip instala un google-adk vacío (0.0.1)
+google-api-core<2.36
 sqlalchemy
 sqlalchemy-bigquery
 tabulate
-streamlit
 pygsheets
+fastapi
+uvicorn[standard]
+python-dotenv
+pyyaml
+# asyncpg: driver de PostgreSQL para guardar el histórico de conversación en Cloud SQL (DatabaseSessionService, URL postgresql+asyncpg://...)
+asyncpg
+# greenlet: lo necesita SQLAlchemy asíncrono (DatabaseSessionService); en Python 3.13 pip no lo trae solo
+greenlet
