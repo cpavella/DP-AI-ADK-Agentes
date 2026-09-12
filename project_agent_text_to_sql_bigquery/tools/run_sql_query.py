@@ -8,7 +8,7 @@ import pandas as pd
 # --- Configuración de conexión a BigQuery ---
 # Reemplaza con tu propio ID de proyecto de Google Cloud
 #TU_PROYECTO_GCP_ID = "project-mlops-10-streamlit" #******************************************************************************
-TU_PROYECTO_GCP_ID = "datapath-kevin-inofuentecolque"
+TU_PROYECTO_GCP_ID = "datapath-ai-17-cpai"
 # URI de conexión que indica a SQLAlchemy usar BigQuery y la tabla pública de CitiBike
 # bigquery://<dataset>/<table>
 db_uri = "bigquery://bigquery-public-data/new_york_citibike"

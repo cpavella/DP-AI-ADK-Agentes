@@ -1,14 +1,18 @@
+# ===================================================================
+# =====================Creamos el entorno de trabajo ================
 # Crea un Virtual Environment
 conda create -n DP-ADK-Agentes python=3.13
-# Actiava el Virtual Environment
+# Activa el Virtual Environment
 conda activate DP-ADK-Agentes
 # Instala las dependencias:
 - pip install -r requirements.txt
 
-# Primer paso
+# ==================================================================
+# =====================Enlazamos nuestro GCP ========================
+# Primer paso: enlazamos con nuestro proyecto de GCP
 - gcloud init
 
-# Segundo paso: Habilitamos el API de VertexAI y BigQuery
+# Segundo paso: Habilitamos el API de AI-Platform (VertexAI) y BigQuery
 - gcloud services enable aiplatform.googleapis.com bigquery.googleapis.com --project=<TU_PROJECT_ID>
 
 # Para tus programas: el ADK, google-cloud-bigquery, cualquier librería de Google
@@ -45,11 +49,14 @@ gcloud sql instances create adk-sessions \
   --storage-size=10GB
 
 # Ver el estado (debe decir RUNNABLE):
-gcloud sql instances list --project=<TU_PROJECT_ID>
+# cloud sql instances list --project=<TU_PROJECT_ID>
+gcloud sql instances list --project=datapath-ai-17-cpai
 
 # --- 3. Crear la base de datos y el usuario que usará el agente
-gcloud sql databases create adk_sessions --instance=adk-sessions --project=<TU_PROJECT_ID>
-gcloud sql users create adk --instance=adk-sessions --project=<TU_PROJECT_ID> --password='<CONTRASEÑA>'
+# gcloud sql databases create adk_sessions --instance=adk-sessions --project=<TU_PROJECT_ID>
+gcloud sql databases create adk_sessions --instance=adk-sessions --project=datapath-ai-17-cpai
+# gcloud sql users create <USUARIO> --instance=adk-sessions --project=<TU_PROJECT_ID> --password='<CONTRASEÑA>'
+gcloud sql users create cpavella --instance=adk-sessions --project=datapath-ai-17-cpai --password='clapataveiba'
 
 # --- 4. Instalar el Cloud SQL Auth Proxy (túnel seguro desde tu PC, se autentica con tus ADC)
 # macOS:
@@ -59,20 +66,23 @@ curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/clou
 # Windows: descargar https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.0/cloud-sql-proxy.x64.exe
 
 # Obtener el "connection name" de la instancia (formato proyecto:region:instancia):
-gcloud sql instances describe adk-sessions --project=<TU_PROJECT_ID> --format="value(connectionName)"
+# gcloud sql instances describe <BD> --project=<TU_PROJECT_ID> --format="value(connectionName)"
+gcloud sql instances describe adk-sessions --project=datapath-ai-17-cpai --format="value(connectionName)"
 
 # --- 5. Levantar el proxy (dejarlo corriendo en una terminal aparte). Expone la base en localhost:5432
-cloud-sql-proxy <TU_PROJECT_ID>:us-central1:adk-sessions --port 5432
+# cloud-sql-proxy <TU_PROJECT_ID>:us-central1:adk-sessions --port 5432
+cloud-sql-proxy datapath-ai-17-cpai:us-central1:adk-sessions --port 5432
 
 # --- 6. Driver de PostgreSQL para Python (ya está en requirements.txt)
 pip install asyncpg
 
 # --- 7. Variable de entorno en project_agent_text_to_sql_bigquery/.env  (NO commitear el .env)
-# SESSION_DB_URL=postgresql+asyncpg://adk:<CONTRASEÑA>@127.0.0.1:5432/adk_sessions
+# SESSION_DB_URL=postgresql+asyncpg://<USUARIO>>:<CONTRASEÑA>@127.0.0.1:5432/adk_sessions
 # Si SESSION_DB_URL no está definida, la API usa SQLite local en .adk/api_sessions.db
 
 # --- 8. Probar con adk web usando la misma base (desde la raíz del repo, con el proxy corriendo)
-adk web --session_service_uri="postgresql+asyncpg://adk:<CONTRASEÑA>@127.0.0.1:5432/adk_sessions"
+# adk web --session_service_uri="postgresql+asyncpg://<USUARIO>:<CONTRASEÑA>@127.0.0.1:5432/adk_sessions"
+adk web --session_service_uri="postgresql+asyncpg://cpavella:clapataveiba@127.0.0.1:5432/adk_sessions"
 
 # --- 9. Probar con la API FastAPI (lee SESSION_DB_URL del .env)
 uvicorn project_agent_text_to_sql_bigquery.main:app --reload --port 8080
@@ -81,7 +91,7 @@ uvicorn project_agent_text_to_sql_bigquery.main:app --reload --port 8080
 
 # --- 10. Ver las tablas que el ADK creó solo (sessions, events, app_states, user_states)
 # Cliente psql: macOS `brew install libpq && brew link --force libpq`; Linux `sudo apt-get install postgresql-client`
-psql "host=127.0.0.1 port=5432 dbname=adk_sessions user=adk"
+psql "host=127.0.0.1 port=5432 dbname=adk_sessions user=<USER>"
 #   \dt
 #   SELECT id, user_id, update_time FROM sessions ORDER BY update_time DESC;
 #   SELECT session_id, author, timestamp FROM events ORDER BY timestamp DESC LIMIT 10;
