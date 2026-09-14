@@ -27,6 +27,8 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from typing import Any
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -83,8 +85,21 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     session_id: str
     user_id: str
-    response: str = Field(..., description="Respuesta final del agente en lenguaje natural.")
-    sql_queries: list[str] = Field(default_factory=list, description="Consultas SQL que el agente ejecutó en BigQuery.")
+
+    response: str = Field(
+        ...,
+        description="Respuesta final del agente en lenguaje natural."
+    )
+
+    sql_queries: list[str] = Field(
+        default_factory=list,
+        description="Consultas SQL que el agente ejecutó en BigQuery."
+    )
+
+    charts: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Visualizaciones generadas por el agente."
+    )
 
 
 class SessionMessage(BaseModel):
@@ -147,20 +162,59 @@ async def get_or_create_session(user_id: str, session_id: str | None):
     )
 
 
-async def run_agent(user_id: str, session_id: str, message: str) -> tuple[str, list[str]]:
-    """Ejecuta el agente y devuelve (respuesta_final, consultas_sql_ejecutadas)."""
+async def run_agent(user_id: str, session_id: str, message: str) -> tuple[str, list[str], list[dict[str, Any]]]:
+    """Ejecuta el agente y devuelve respuesta, consultas SQL y gráficos generados."""
+    
     content = types.Content(role="user", parts=[types.Part(text=message)])
     final_text: list[str] = []
     sql_queries: list[str] = []
+    charts: list[dict[str, Any]] = []
 
     async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
+        # Capturar consultas SQL ejecutadas
         for call in event.get_function_calls():
-            if call.name == "run_sql_query" and call.args and "query" in call.args:
+            if (
+                call.name == "run_sql_query"
+                and call.args
+                and "query" in call.args
+            ):
                 sql_queries.append(call.args["query"])
-        if event.is_final_response() and event.content and event.content.parts:
-            final_text.extend(part.text for part in event.content.parts if part.text)
 
-    return "".join(final_text).strip(), sql_queries
+        # Capturar gráficos generados por create_visualization
+        for function_response in event.get_function_responses():
+            if function_response.name == "create_visualization":
+
+                payload = function_response.response
+
+                # Algunas versiones de ADK pueden envolver
+                # la respuesta dentro de "result"
+                if (
+                    isinstance(payload, dict)
+                    and "result" in payload
+                    and isinstance(payload["result"], dict)
+                ):
+                    payload = payload["result"]
+
+                if (
+                    isinstance(payload, dict)
+                    and payload.get("status") == "success"
+                    and payload.get("chart")
+                ):
+                    charts.append(payload["chart"])
+
+        # Capturar respuesta textual final
+        if (
+            event.is_final_response()
+            and event.content
+            and event.content.parts
+        ):
+            final_text.extend(
+                part.text
+                for part in event.content.parts
+                if part.text
+            )
+
+    return "".join(final_text).strip(), sql_queries, charts
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +229,7 @@ async def health():
 async def chat(request: ChatRequest):
     session = await get_or_create_session(request.user_id, request.session_id)
     try:
-        response, sql_queries = await run_agent(request.user_id, session.id, request.message)
+        response, sql_queries, charts = await run_agent(request.user_id, session.id, request.message)
     except Exception as exc:  # errores de Vertex AI / BigQuery / credenciales
         logger.exception("Error ejecutando el agente")
         raise HTTPException(status_code=502, detail=f"Error al ejecutar el agente: {exc}") from exc
@@ -184,7 +238,7 @@ async def chat(request: ChatRequest):
         response = "El agente no produjo una respuesta final."
 
     return ChatResponse(
-        session_id=session.id, user_id=request.user_id, response=response, sql_queries=sql_queries
+        session_id=session.id, user_id=request.user_id, response=response, sql_queries=sql_queries, charts=charts
     )
 
 

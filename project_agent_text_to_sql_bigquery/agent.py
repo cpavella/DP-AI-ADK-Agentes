@@ -16,6 +16,7 @@ from google.adk.agents import Agent
 
 # El "." al principio significa que es una importación "relativa" desde la misma carpeta del proyecto.
 from .tools.run_sql_query import run_sql_query
+from .tools.create_visualization import create_visualization
 
 # --- Constantes ---
 PROMPT_PATH = Path(__file__).resolve().parent / "prompt" / "system_prompt.yaml"
@@ -41,6 +42,7 @@ root_agent = Agent(
     description="Agente Analista de Datos de CitiBike",
     tools=[
         run_sql_query,
+        create_visualization,
     ],
     instruction=load_system_prompt(),
 )

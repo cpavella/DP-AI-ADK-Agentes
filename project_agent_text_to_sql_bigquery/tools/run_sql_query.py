@@ -4,6 +4,8 @@ from sqlalchemy import create_engine, text
 from google.cloud import bigquery
 from google.cloud.bigquery import dbapi
 import pandas as pd
+import json
+from google.adk.tools import ToolContext
 
 # --- Configuración de conexión a BigQuery ---
 # Reemplaza con tu propio ID de proyecto de Google Cloud
@@ -26,33 +28,64 @@ engine = create_engine(db_uri, creator=get_bigquery_connection)
 
 # Esta es ahora una función de Python normal, al igual que tus herramientas de RAG.
 # El ADK la convertirá en una herramienta automáticamente.
-def run_sql_query(query: str) -> str:
+# Devuelve Markdown para que el agente pueda mostrarlo en la interfaz de usuario.
+# Guarda last_query_rows y last_query_columns en el estado de la sesión para 
+# que otras herramientas puedan acceder a los datos sin volver a consultar BigQuery. 
+def run_sql_query(query: str, tool_context: ToolContext) -> str:
     """
-    Ejecuta una consulta SQL en una base de datos de BigQuery que contiene datos de viajes de CitiBike en Nueva York
-    y devuelve el resultado como una tabla formateada. La consulta debe ser compatible
-    con el dialecto SQL de Google BigQuery.
+    Ejecuta una consulta SQL en BigQuery sobre los datos de CitiBike.
+
+    Guarda además el resultado estructurado en el estado de la sesión
+    para que otras herramientas, como create_visualization, puedan
+    utilizar los datos sin volver a consultar BigQuery.
 
     Args:
-        query (str): La consulta SQL completa a ejecutar en BigQuery.
+        query: Consulta SQL completa compatible con BigQuery.
 
     Returns:
-        str: El resultado de la consulta como una tabla de texto (Markdown) o un mensaje de error.
+        Resultado de la consulta como tabla Markdown o mensaje de error.
     """
+
+    # Limpiar resultados anteriores para evitar usar datos viejos
+    tool_context.state["last_query_rows"] = []
+    tool_context.state["last_query_columns"] = []
+
     try:
         with engine.connect() as connection:
-            # Usamos text() para asegurar que SQLAlchemy trate el string como SQL literal
             result_proxy = connection.execute(text(query))
-            
-            # Convertimos el resultado a un DataFrame de Pandas para un formato bonito
-            df = pd.DataFrame(result_proxy.fetchall(), columns=result_proxy.keys())
-            
-            # Si el DataFrame está vacío, devuelve un mensaje
+
+            df = pd.DataFrame(
+                result_proxy.fetchall(),
+                columns=result_proxy.keys()
+            )
+
             if df.empty:
-                return "La consulta se ejecutó correctamente, pero no devolvió resultados."
-            
-            # Convertimos el DataFrame a un string (Markdown) para que el LLM lo pueda leer
+                return (
+                    "La consulta se ejecutó correctamente, "
+                    "pero no devolvió resultados."
+                )
+
+            # Guardamos como máximo 100 filas para visualización
+            df_chart = df.head(100)
+
+            # Conversión segura a JSON
+            rows = json.loads(
+                df_chart.to_json(
+                    orient="records",
+                    date_format="iso"
+                )
+            )
+
+            tool_context.state["last_query_rows"] = rows
+            tool_context.state["last_query_columns"] = list(df.columns)
+            tool_context.state["last_query_row_count"] = len(df)
+
+            # Se mantiene el comportamiento actual
             return df.to_markdown(index=False)
 
     except Exception as e:
-        # Si hay un error de SQL, devuélvelo para que el agente pueda intentar corregirlo.
+
+        tool_context.state["last_query_rows"] = []
+        tool_context.state["last_query_columns"] = []
+
         return f"Error al ejecutar la consulta: {e}"

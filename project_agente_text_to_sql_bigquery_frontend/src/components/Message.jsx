@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import ChartView from './ChartView.jsx'
 
 export default function Message({ message }) {
   const isUser = message.role === 'user'
@@ -26,6 +27,13 @@ export default function Message({ message }) {
             ))}
           </details>
         )}
+
+        {message.charts?.map((chart, index) => (
+          <ChartView
+            key={index}
+            spec={chart}
+          />
+        ))}
       </div>
     </div>
   )
