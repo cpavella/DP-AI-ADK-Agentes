@@ -57,7 +57,7 @@ export default function App() {
         sessionId: data.session_id,
         messages: [
           ...prev.messages,
-          { role: 'assistant', content: data.response, sqlQueries: data.sql_queries ?? [] },
+          { role: 'assistant', content: data.response, sqlQueries: data.sql_queries ?? [], charts: data.charts ?? [] },
         ],
       }))
     } catch (e) {
